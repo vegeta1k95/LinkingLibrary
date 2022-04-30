@@ -83,7 +83,7 @@ public class Linking {
 
     }
 
-    public static void inflateNativeItem(int number, LayoutInflater inflater, int layoutId, ViewGroup root) {
+    public static void inflateNativeItem(int number, LayoutInflater inflater, int layoutId, ViewGroup root, boolean clearRoot) {
         FirebaseRemoteConfig config = FirebaseRemoteConfig.getInstance();
         config.fetchAndActivate().addOnCompleteListener(task -> {
             String configString = config.getString(KEY_CONFIG_NATIVE);
@@ -113,7 +113,7 @@ public class Linking {
                     if (choices.contains(item))
                         continue;
                     choices.add(item);
-                    inflate(inflater, item, layoutId, root);
+                    inflate(inflater, item, layoutId, root, clearRoot);
                     numOf -= 1;
                 }
 
@@ -123,7 +123,7 @@ public class Linking {
         });
     }
 
-    private static void inflate(LayoutInflater inflater, LinkedItemNative item, int layoutId, ViewGroup root) {
+    private static void inflate(LayoutInflater inflater, LinkedItemNative item, int layoutId, ViewGroup root, boolean clearRoot) {
 
         if (item == null) {
             return;
@@ -148,6 +148,10 @@ public class Linking {
             ImageDownloader.drawableFromUrl(context, icon, item.getIconUrl(), new ImageDownloader.IOnImageLoaded() {
                 @Override
                 public void onLoaded() {
+
+                    if (clearRoot)
+                        root.removeAllViews();
+
                     root.addView(view);
                     view.setOnClickListener(v -> {
                         Intent intent = new Intent(Intent.ACTION_VIEW);
