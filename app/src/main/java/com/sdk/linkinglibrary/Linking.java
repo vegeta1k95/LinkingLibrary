@@ -1,6 +1,6 @@
 package com.sdk.linkinglibrary;
 
-import android.content.Context;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.net.Uri;
@@ -28,7 +28,7 @@ public class Linking {
         void onSuccess(LinkedItemOnBoard item);
     }
 
-    public static void inflateOnBoardItem(Context context, int number, IListener listener) {
+    public static void inflateOnBoardItem(Activity context, int number, IListener listener) {
 
         FirebaseRemoteConfig config = FirebaseRemoteConfig.getInstance();
         config.fetchAndActivate().addOnCompleteListener(task -> {
@@ -83,7 +83,7 @@ public class Linking {
 
     }
 
-    public static void inflateNativeItem(int number, LayoutInflater inflater, int layoutId, ViewGroup root, boolean clearRoot) {
+    public static void inflateNativeItem(Activity activity, int number, int layoutId, ViewGroup root, boolean clearRoot) {
         FirebaseRemoteConfig config = FirebaseRemoteConfig.getInstance();
         config.fetchAndActivate().addOnCompleteListener(task -> {
             String configString = config.getString(KEY_CONFIG_NATIVE);
@@ -113,7 +113,7 @@ public class Linking {
                     if (choices.contains(item))
                         continue;
                     choices.add(item);
-                    inflate(inflater, item, layoutId, root, clearRoot);
+                    inflate(activity, item, layoutId, root, clearRoot);
                     numOf -= 1;
                 }
 
@@ -123,20 +123,20 @@ public class Linking {
         });
     }
 
-    private static void inflate(LayoutInflater inflater, LinkedItemNative item, int layoutId, ViewGroup root, boolean clearRoot) {
+    private static void inflate(Activity activity, LinkedItemNative item, int layoutId, ViewGroup root, boolean clearRoot) {
 
         if (item == null) {
             return;
         }
 
-        Context context = inflater.getContext();
-        Resources resources = context.getResources();
+        LayoutInflater inflater = activity.getLayoutInflater();
+        Resources resources = activity.getResources();
 
         View view = inflater.inflate(layoutId, root, false);
 
-        TextView title = view.findViewById(resources.getIdentifier("txt_link_title", "id", context.getPackageName()));
-        TextView descr = view.findViewById(resources.getIdentifier("txt_link_descr", "id", context.getPackageName()));
-        ImageView icon = view.findViewById(resources.getIdentifier("img_link_icon", "id", context.getPackageName()));
+        TextView title = view.findViewById(resources.getIdentifier("txt_link_title", "id", activity.getPackageName()));
+        TextView descr = view.findViewById(resources.getIdentifier("txt_link_descr", "id", activity.getPackageName()));
+        ImageView icon = view.findViewById(resources.getIdentifier("img_link_icon", "id", activity.getPackageName()));
 
         if (title != null)
             title.setText(item.getTitle());
@@ -145,7 +145,7 @@ public class Linking {
             descr.setText(item.getDescription());
 
         if (icon != null)
-            ImageDownloader.drawableFromUrl(context, icon, item.getIconUrl(), new ImageDownloader.IOnImageLoaded() {
+            ImageDownloader.drawableFromUrl(activity, icon, item.getIconUrl(), new ImageDownloader.IOnImageLoaded() {
                 @Override
                 public void onLoaded() {
 
@@ -157,8 +157,8 @@ public class Linking {
                         Intent intent = new Intent(Intent.ACTION_VIEW);
                         intent.setData(Uri.parse("https://play.google.com/store/apps/details?id="+item.getAppPackage()));
                         intent.setPackage("com.android.vending");
-                        if (intent.resolveActivity(context.getPackageManager()) != null)
-                            context.startActivity(intent);
+                        if (intent.resolveActivity(activity.getPackageManager()) != null)
+                            activity.startActivity(intent);
                     });
                 }
             });

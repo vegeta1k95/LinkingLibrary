@@ -1,7 +1,6 @@
 package com.sdk.linkinglibrary;
 
-import android.content.Context;
-import android.graphics.Bitmap;
+import android.app.Activity;
 import android.graphics.drawable.Drawable;
 import android.widget.ImageView;
 
@@ -25,11 +24,29 @@ public class ImageDownloader {
         default void onFailed() {}
     }
 
-    public static void drawableFromUrl(Context context, ImageView image, String url,
+    public static void drawableFromUrl(Activity context, ImageView image, String url,
                                        @Nullable IOnImageLoaded listener) {
         FirebaseStorage storage = FirebaseStorage.getInstance();
+
+        if (context == null || context.isDestroyed()
+                || url == null || url.isEmpty() || !url.startsWith("gs://")) {
+            if (listener != null)
+                listener.onFailed();
+            return;
+        }
+
+        StorageReference reference;
+
+        try {
+            reference = storage.getReferenceFromUrl(url);
+        } catch (IllegalArgumentException e) {
+            if (listener != null)
+                listener.onFailed();
+            return;
+        }
+
         Glide.with(context)
-                .load(url.startsWith("gs://") ? storage.getReferenceFromUrl(url) : url)
+                .load(reference)
                 .diskCacheStrategy(DiskCacheStrategy.RESOURCE)
                 .listener(new RequestListener<Drawable>() {
                     @Override
@@ -49,9 +66,9 @@ public class ImageDownloader {
                 .into(image);
     }
 
-    public static void preloadDrawablesFromUrls(Context context, List<String> urls,
+    public static void preloadDrawablesFromUrls(Activity context, List<String> urls,
                                                 @Nullable IOnImageLoaded listener) {
-        if (urls.size() == 0) {
+        if (context == null || context.isDestroyed() || urls.size() == 0) {
             if (listener != null)
                 listener.onFailed();
             return;
@@ -62,9 +79,35 @@ public class ImageDownloader {
         FirebaseStorage storage = FirebaseStorage.getInstance();
 
         for (int i = 0; i< states[0]; i++)  {
+
             String url = urls.get(i);
+
+            if (url == null || url.isEmpty() || !url.startsWith("gs://")) {
+                if (listener != null) {
+                    states[0] -= 1;
+                    states[1] = 1;
+                    if (states[0] == 0)
+                        listener.onFailed();
+                }
+                continue;
+            }
+
+            StorageReference reference;
+
+            try {
+                reference = storage.getReferenceFromUrl(url);
+            } catch (IllegalArgumentException e) {
+                if (listener != null) {
+                    states[0] -= 1;
+                    states[1] = 1;
+                    if (states[0] == 0)
+                        listener.onFailed();
+                }
+                continue;
+            }
+
             Glide.with(context)
-                    .load(url.startsWith("gs://") ? storage.getReferenceFromUrl(url) : url)
+                    .load(reference)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .listener(new RequestListener<Drawable>() {
                         @Override
@@ -103,9 +146,10 @@ public class ImageDownloader {
 
     }
 
-    public static void loadDrawablesFromCache(Context context, List<ImageView> images,
+    public static void loadDrawablesFromCache(Activity activity, List<ImageView> images,
                                               List<String> urls) {
-        if (images.size() != urls.size() || images.size() == 0) {
+        if (activity == null || activity.isDestroyed() ||
+                images.size() != urls.size() || images.size() == 0) {
             return;
         }
 
@@ -114,12 +158,19 @@ public class ImageDownloader {
         FirebaseStorage instance = FirebaseStorage.getInstance();
 
         for (int i = 0; i< states[0]; i++)  {
-            StorageReference reference = instance.getReferenceFromUrl(urls.get(i));
-            Glide.with(context)
-                    .load(reference)
-                    .onlyRetrieveFromCache(true)
-                    .into(images.get(i));
 
+            String url = urls.get(i);
+
+            if (url == null || url.isEmpty() || !url.startsWith("gs://"))
+                continue;
+
+            try {
+                StorageReference reference = instance.getReferenceFromUrl(url);
+                Glide.with(activity)
+                        .load(reference)
+                        .onlyRetrieveFromCache(true)
+                        .into(images.get(i));
+            } catch (IllegalArgumentException ignored) { /* ... */ }
         }
 
     }
