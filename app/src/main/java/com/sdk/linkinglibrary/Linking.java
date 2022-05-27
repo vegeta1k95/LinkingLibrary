@@ -92,6 +92,10 @@ public class Linking {
                                 }
                             });
 
+                            dialog.findViewById(R.id.btn_close).setOnClickListener(v -> {
+                                dialog.dismiss();
+                            });
+
                             List<ImageView> images = new ArrayList<>();
 
                             ViewGroup featuresContainer = dialog.findViewById(R.id.features_container);
