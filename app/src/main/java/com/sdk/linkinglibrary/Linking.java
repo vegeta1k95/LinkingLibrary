@@ -64,14 +64,12 @@ public class Linking {
 
                             String pkg = args.getString("id");
                             String title = args.getString("title");
-                            String btnText = args.getString("button");
                             String imgUrl = args.getString("image");
                             ArrayList<String> featuresIconUrls = args.getStringArrayList("features_icon");
                             ArrayList<String> featuresText = args.getStringArrayList("features_text");
 
                             if (pkg  == null
                                     || title == null
-                                    || btnText == null
                                     || imgUrl == null
                                     || featuresIconUrls == null
                                     || featuresText == null)
@@ -82,10 +80,7 @@ public class Linking {
                             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
                             TextView tvTitle = dialog.findViewById(R.id.txt_title);
-                            TextView tvBtnText = dialog.findViewById(R.id.txt_btn);
-
                             tvTitle.setText(title);
-                            tvBtnText.setText(btnText);
 
                             View btnDownload = dialog.findViewById(R.id.btn_link);
                             btnDownload.setOnClickListener(v -> {
