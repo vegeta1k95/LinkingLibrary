@@ -1,9 +1,13 @@
 package com.sdk.linkinglibrary;
 
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Intent;
 import android.content.res.Resources;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
+import android.os.Bundle;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,12 +28,7 @@ public class Linking {
     private static final String KEY_CONFIG_NATIVE = "linking_native";
     private static final String KEY_CONFIG_ONBOARD = "linking_onboard";
 
-    public interface IListener {
-        void onSuccess(LinkedItemOnBoard item);
-    }
-
-    public static void inflateOnBoardItem(Activity context, int number, IListener listener) {
-
+    public static void inflatePopup(Activity mContext) {
         FirebaseRemoteConfig config = FirebaseRemoteConfig.getInstance();
         config.fetchAndActivate().addOnCompleteListener(task -> {
             String configString = config.getString(KEY_CONFIG_ONBOARD);
@@ -44,37 +43,83 @@ public class Linking {
                         mItems.add(item.getWeight(), item);
                 }
 
-                if (mItems.size() == 0 || number <= 0)
+                if (mItems.size() == 0)
                     return;
 
-                int numOf = number;
+                LinkedItemOnBoard item = mItems.next();
 
-                if (numOf > mItems.size())
-                    numOf = mItems.size();
-
-                List<LinkedItemOnBoard> choices = new ArrayList<>();
-
-                while (numOf > 0) {
-                    LinkedItemOnBoard item = mItems.next();
-                    if (choices.contains(item))
-                        continue;
-                    choices.add(item);
-                    numOf -= 1;
+                List<String> urls = new ArrayList<>();
+                for (Pair<String, String> feature : item.getFeatures()){
+                    urls.add(feature.first);
                 }
-
-                for (LinkedItemOnBoard item : choices) {
-                    List<String> urls = new ArrayList<>();
-                    for (Pair<String, String> feature : item.getFeatures()){
-                        urls.add(feature.first);
-                    }
-                    urls.add(item.getImageUrl());
-                    ImageDownloader.preloadDrawablesFromUrls(context, urls, new ImageDownloader.IOnImageLoaded() {
+                urls.add(item.getImageUrl());
+                ImageDownloader.preloadDrawablesFromUrls(mContext, urls, new ImageDownloader.IOnImageLoaded() {
                         @Override
                         public void onLoaded() {
-                            listener.onSuccess(item);
+
+                            Bundle args = item.toBundle();
+
+                            if (args == null)
+                                return;
+
+                            String pkg = args.getString("id");
+                            String title = args.getString("title");
+                            String btnText = args.getString("button");
+                            String imgUrl = args.getString("image");
+                            ArrayList<String> featuresIconUrls = args.getStringArrayList("features_icon");
+                            ArrayList<String> featuresText = args.getStringArrayList("features_text");
+
+                            if (pkg  == null
+                                    || title == null
+                                    || btnText == null
+                                    || imgUrl == null
+                                    || featuresIconUrls == null
+                                    || featuresText == null)
+                                return;
+
+                            Dialog dialog = new Dialog(mContext);
+                            dialog.setContentView(R.layout.dialog_layout_linking);
+                            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+                            TextView tvTitle = dialog.findViewById(R.id.txt_title);
+                            TextView tvBtnText = dialog.findViewById(R.id.txt_btn);
+
+                            tvTitle.setText(title);
+                            tvBtnText.setText(btnText);
+
+                            View btnDownload = dialog.findViewById(R.id.btn_link);
+                            btnDownload.setOnClickListener(v -> {
+                                Intent intent = new Intent(Intent.ACTION_VIEW);
+                                intent.setData(Uri.parse("https://play.google.com/store/apps/details?id=" + pkg));
+                                intent.setPackage("com.android.vending");
+                                if (intent.resolveActivity(mContext.getPackageManager()) != null) {
+                                    mContext.startActivity(intent);
+                                }
+                            });
+
+                            List<ImageView> images = new ArrayList<>();
+
+                            ViewGroup featuresContainer = dialog.findViewById(R.id.features_container);
+
+                            for (String featureText : featuresText) {
+                                View row = mContext.getLayoutInflater().inflate(R.layout.dialog_onboard_feature, featuresContainer, false);
+                                TextView tvName = row.findViewById(R.id.txt_feature_name);
+                                ImageView ivIcon = row.findViewById(R.id.img_feature_icon);
+
+                                tvName.setText(featureText);
+                                images.add(ivIcon);
+                                featuresContainer.addView(row);
+                            }
+                            images.add(dialog.findViewById(R.id.img_big));
+
+                            featuresIconUrls.add(imgUrl);
+                            ImageDownloader.loadDrawablesFromCache(mContext, images, featuresIconUrls);
+
+                            dialog.show();
+
                         }
-                    });
-                }
+                });
+
 
             } catch (JSONException e) {
                 /* ... */
