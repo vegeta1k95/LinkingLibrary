@@ -2,7 +2,9 @@ package com.sdk.linkinglibrary;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -25,10 +27,27 @@ import java.util.List;
 
 public class Linking {
 
+    private static final String PREFERENCES = "linking";
+    private static final String KEY = "POPUP_SHOWN";
+
     private static final String KEY_CONFIG_NATIVE = "linking_native";
     private static final String KEY_CONFIG_ONBOARD = "linking_onboard";
 
+    private static boolean isPopupShown(Activity mContext) {
+        SharedPreferences preferences = mContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE);
+        return preferences.contains(KEY);
+    }
+
+    private static void setPopupShown(Activity mContext) {
+        SharedPreferences preferences = mContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE);
+        preferences.edit().putBoolean(KEY, true).apply();
+    }
+
     public static void inflatePopup(Activity mContext) {
+
+        if (isPopupShown(mContext))
+            return;
+
         FirebaseRemoteConfig config = FirebaseRemoteConfig.getInstance();
         config.fetchAndActivate().addOnCompleteListener(task -> {
             String configString = config.getString(KEY_CONFIG_ONBOARD);
@@ -115,7 +134,7 @@ public class Linking {
                             ImageDownloader.loadDrawablesFromCache(mContext, images, featuresIconUrls);
 
                             dialog.show();
-
+                            setPopupShown(mContext);
                         }
                 });
 
